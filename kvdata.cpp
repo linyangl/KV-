@@ -133,7 +133,6 @@ int kvdb::del(KVDBHandler* handler, const std::string& key)
 			//tempfile.read(reinterpret_cast<char*>(&tempvalue),tempvalue_length*sizeof(unsigned int));
 			tempvalue_length = -1;
 			existkey_flag = 1;
-			break;
 		}
 		else
 			tempfile.seekg(tempvalue_length, ios::cur);
