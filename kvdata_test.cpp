@@ -4,7 +4,7 @@
 
 int main(int, char**) {
     std::string value;
-    kvdb::KVDBHandler kv("db_path");
+    kvdb::KVDBHandler kv("C:\\AMD");
 
     kvdb::set(&kv, "key_ig", "value_jgkz");
     kvdb::set(&kv, "key_b", "value_wbj");
