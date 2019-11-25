@@ -19,10 +19,9 @@ namespace kvdb {
 KVDBHandler::KVDBHandler(const std::string& db_file)
 {
 	assignpath_file=db_file;
-	file.open(assignpath_file.c_str(),ios::in|ios::app|ios::binary);
+	file.open(assignpath_file.c_str(),ios::in|ios::out|ios::app|ios::binary);
 	if(file.is_open())
 	{
-		//return KVDB_INVALID_AOF_PATH;
 		file.close();	
 		file.open(assignpath_file.c_str(),ios::in|ios::out|ios::app|ios::binary);
 		if(file.fail())
@@ -32,6 +31,7 @@ KVDBHandler::KVDBHandler(const std::string& db_file)
 	}
 	else
 	{
+		//return KVDB_INVALID_AOF_PATH;
 		file.open(assignpath_file.c_str(),ios::in|ios::out|ios::app|ios::binary);
 	}
 } 
@@ -103,7 +103,6 @@ int get(KVDBHandler* handler, const std::string& key, std::string& value)
 			tempfile.read(reinterpret_cast<char*>(&tempvalue),tempvalue_length*sizeof(unsigned int));
 			value = tempvalue;
 			existkey_flag = 1;
-			break;
 		}
 		tempfile.seekg(tempvalue_length,ios::cur);	
 		
@@ -172,3 +171,7 @@ int del(KVDBHandler* handler, const std::string& key)
 		
 }
 } 
+int main()
+{
+	return 0;
+}
