@@ -173,5 +173,54 @@ int del(KVDBHandler* handler, const std::string& key)
 } 
 int main()
 {
+	std::string value;
+    kvdb::KVDBHandler kv("dp_path");
+    
+    kvdb::set(&kv, "key_ig", "value_jgkz");
+    kvdb::set(&kv, "key_b", "value_wbj");
+    kvdb::set(&kv, "key_s", "value_up");
+    kvdb::set(&kv, "key_fqn", "value_s");
+    kvdb::set(&kv, "key_r", "value_kul");
+    kvdb::set(&kv, "key_dicd", "value_k");
+    kvdb::set(&kv, "key_b", "value_f");
+    kvdb::set(&kv, "key_e", "value_yvm");
+    kvdb::set(&kv, "key_o", "value_t");
+    kvdb::set(&kv, "key_w", "value_zfa");
+    kvdb::set(&kv, "key_q", "value_uo");
+    kvdb::set(&kv, "key_nk", "value_e");
+    kvdb::set(&kv, "key_ni", "value_ut");
+    kvdb::set(&kv, "key_vvt", "value_l");
+    kvdb::set(&kv, "key_s", "value_if");
+    kvdb::set(&kv, "key_xyf", "value_ndd");
+    kvdb::set(&kv, "key_t", "value_db");
+    kvdb::set(&kv, "key_nej", "value_by");
+    kvdb::set(&kv, "key_px", "value_oe");
+    kvdb::set(&kv, "key_zkp", "value_v");
+    kvdb::set(&kv, "key_xyf", "value_t");
+    kvdb::set(&kv, "key_w", "value_c");
+    kvdb::set(&kv, "key_vvt", "value_n");
+    kvdb::set(&kv, "key_gr", "value_o");
+    kvdb::set(&kv, "key_kbtp", "value_fpu");
+    kvdb::set(&kv, "key_moc", "value_rh");
+    kvdb::set(&kv, "key_r", "value_q");
+    kvdb::set(&kv, "key_kg", "value_p");
+    kvdb::set(&kv, "key_e", "value_h");
+    kvdb::set(&kv, "key_ip", "value_q");
+    kvdb::set(&kv, "key_e", "value_g");
+    kvdb::set(&kv, "key_m", "value_co");
+    kvdb::set(&kv, "key_cr", "value_h");
+    kvdb::set(&kv, "key_b", "value_d");
+    kvdb::set(&kv, "key_c", "value_n");
+    kvdb::set(&kv, "key_ig", "value_nx");
+    kvdb::set(&kv, "key_gd", "value_wjn");
+    kvdb::set(&kv, "key_v", "value_d");
+    kvdb::set(&kv, "key_f", "value_qh");
+    kvdb::set(&kv, "key_clwt", "value_z");
+    kvdb::set(&kv, "key_j", "value_hfb");
+    kvdb::set(&kv, "key_qiyh", "value_d");
+    kvdb::set(&kv, "key_b", "value_o");
+    kvdb::set(&kv, "key_vvt", "value_txy");
+    kvdb::set(&kv, "key_t", "value_cqc");
+    kvdb::set(&kv, "key_w", "value_kx");
 	return 0;
 }
