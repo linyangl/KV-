@@ -2,9 +2,8 @@
 #include <stdint.h>
 #include <string>
 #include <fstream> 
-#include "kvdata.h" 
+#include "kvbasedata.h" 
 using namespace std;
-using namespace kvdb;
 
 struct KVData
 {
@@ -19,21 +18,19 @@ namespace kvdb {
 KVDBHandler::KVDBHandler(const std::string& db_file)
 {
 	assignpath_file=db_file;
-	file.open(assignpath_file,ios::in|ios::out|ios::app|ios::binary);
-	if(file.fail())
+	file.open(assignpath_file,ios::out|ios::in|ios::app|ios::binary);
+	if(file.is_open())
 	{
 		//return KVDB_INVALID_AOF_PATH;
-		ofstream tempfile(assignpath_file,ios::out|ios::app|ios::binary);
-		tempfile.close();
-		
+		file.close();
 		file.open(assignpath_file,ios::in|ios::out|ios::app|ios::binary);
-		if(file.fail())
-		{
-		 	return 	KVDB_INVALID_KEY ;
-		}
-		else
-		return KVDB_OK;
 	}
+	else
+	{
+		file.open(assignpath_file,ios::in|ios::out|ios::app|ios::binary);
+	}
+		//else
+		//return KVDB_OK;
 } 
 
 string KVDBHandler::getpath_file()
