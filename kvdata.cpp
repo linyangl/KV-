@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string>
 #include <fstream> 
-#include "kvbasedata.h" 
+#include "kvdb.h" 
 using namespace std;
 using namespace kvdb;
 
@@ -14,7 +14,6 @@ struct KVData
 	string value;
 };
 //fstream file;
-namespace kvdb {
 	
 KVDBHandler::KVDBHandler(const std::string& db_file)
 {
@@ -52,39 +51,35 @@ KVDBHandler::~KVDBHandler()
 }
 
 
-int set(KVDBHandler* handler, const std::string& key, const std::string& value)
+int kvdb::set(KVDBHandler* handler, const std::string& key, const std::string& value)
 {
 	fstream& tempfile = handler->getfile();
-	
-	KVData data;
-	data.key_length = key.length();
-	data.value_length = value.length();
-	data.key = key;
-	data.value = value;
+	uint32_t key_length = key.length();
+	uint32_t value_length = value.length();
 	
 	tempfile.seekg(0,ios::end);
+	tempfile.write(reinterpret_cast<char*>(&key_length),sizeof(uint32_t));
+	tempfile.write(reinterpret_cast<char*>(&value_length),sizeof(uint32_t));
+	const char *keykey = key.c_str();
+	const char *valuevalue = value.c_str(); 
+	tempfile << keykey;
+	tempfile << valuevalue;
 	
-	tempfile.write(reinterpret_cast<char*>(&data.key_length),sizeof(uint32_t));
-	tempfile.write(reinterpret_cast<char*>(&data.value_length),sizeof(uint32_t));
-	//tempfile.write(reinterpret_cast<char*>(&data.key),data.key_length*sizeof(unsigned int));
-	//tempfile.write(reinterpret_cast<char*>(&data.value),data.value_length*sizeof(unsigned int));
-	tempfile<<data.key.c_str();
-	tempfile<<data.value.c_str();
 	return KVDB_OK;
 }
 
-int get(KVDBHandler* handler, const std::string& key, std::string& value)
+int kvdb::get(KVDBHandler* handler, const std::string& key, std::string& value)
 {
 	fstream& tempfile = handler->getfile();
 	
 	// tempdata of KVData;
 	uint32_t  tempkey_length;
 	uint32_t  tempvalue_length;
-	string tempkey;
-	string tempvalue;
-	value.clear();
-	
+	char tempkey[1024];
+	char tempvalue[1024];
+
 	int existkey_flag = 0;
+	string tempkey2;
 	
 	//base address is file header, offset is 0 , position in file header
 	tempfile.seekg(0,ios::beg);
@@ -92,85 +87,88 @@ int get(KVDBHandler* handler, const std::string& key, std::string& value)
 	{
 		tempfile.read(reinterpret_cast<char*>(&tempkey_length),sizeof(uint32_t));
 		tempfile.read(reinterpret_cast<char*>(&tempvalue_length),sizeof(uint32_t));
-		
-		if(tempvalue_length == 0)
-		{
-			tempfile.seekg(tempkey_length,ios::cur);
-			continue;
-		}
-		
 		tempfile.read(reinterpret_cast<char*>(&tempkey),tempkey_length*sizeof(char));
-		if(tempkey == key)
+		tempkey[tempkey_length]='\0';
+		tempkey2 = tempkey;
+		
+		
+		if(tempkey2 == key)
 		{
-			tempfile.read(reinterpret_cast<char*>(&tempvalue),tempvalue_length*sizeof(char));
-			tempvalue[tempvalue_length]='\0';
-			value = tempvalue;
-			existkey_flag = 1;
+			if(tempvalue_length == 0)
+			{
+				existkey_flag = 0;
+				value.clear();
+				continue;
+			}
+			else
+			{
+				value.resize(tempvalue_length);
+				tempfile.read(reinterpret_cast<char*>(&value),tempvalue_length*sizeof(char));
+				existkey_flag = 1;
+			}	
 		}
-		tempfile.seekg(tempvalue_length,ios::cur);	
+		else
+		{
+			tempfile.seekg(tempvalue_length,ios::cur);	
+		}
 		
 	} 
+	
 	if(existkey_flag == 1) 
 	return KVDB_OK;					//existence
 	else
-	return KVDB_NOT_EXISTS_KEY;		//inexistence
+	return KVDB_INVALID_KEY;		//inexistence
 }
 
-int del(KVDBHandler* handler, const std::string& key)
+int kvdb::del(KVDBHandler* handler, const std::string& key)
 {
 	fstream& tempfile = handler->getfile();
-	KVData tempdata; 
+	
 	uint32_t  tempkey_length;
 	uint32_t  tempvalue_length ;
-	string tempkey;
-	string tempvalue;
+	char tempkey[1024];
 	
 	int existkey_flag = 0;
+	string tempkey2;
 	
-	//base address is file header, offset is 0 , position in file header
 	tempfile.seekg(0,ios::beg);
 	while(tempfile.peek()!=EOF) 
 	{
 		tempfile.read(reinterpret_cast<char*>(&tempkey_length),sizeof(uint32_t));
 		tempfile.read(reinterpret_cast<char*>(&tempvalue_length),sizeof(uint32_t));
-		
-		if(tempvalue_length == 0)
-		{
-			tempfile.seekg(tempkey_length,ios::cur);
-			existkey_flag = 0;
-			continue;
-		}
-		
 		tempfile.read(reinterpret_cast<char*>(&tempkey),tempkey_length*sizeof(char));
-		if(tempkey == key)
+		tempkey[tempkey_length]='\0';
+	    tempkey2 = tempkey;
+	
+		if(tempkey2 == key)
 		{
-			//tempfile.read(reinterpret_cast<char*>(&tempvalue),tempvalue_length*sizeof(unsigned int));
-			tempvalue_length = 0;
-			existkey_flag = 1;
+			if(tempvalue_length == 0)
+			{
+				existkey_flag = 0;
+				continue;
+			}
+			else
+			{
+				existkey_flag = 1;
+			}
 		}
 		tempfile.seekg(tempvalue_length,ios::cur);	
 	} 
 	
 	if(existkey_flag == 1) 
 	{
-		//uint32_t  key_length;
-		//uint32_t  value_length;
-		//string key;
-		//string value;
-		tempdata.key_length =  tempkey_length;
-		tempdata.value_length = tempvalue_length;
-		tempdata.key = tempkey;
+		tempkey_length = key.length();
+		tempvalue_length = 0;
 		
 		tempfile.seekg(0,ios::end);
-		tempfile.write(reinterpret_cast<char*>(&tempdata.key_length),sizeof(uint32_t));
-		tempfile.write(reinterpret_cast<char*>(&tempdata.value_length),sizeof(uint32_t));
-//		tempfile.write(reinterpret_cast<char*>(&tempdata.key),tempdata.key_length*sizeof(char));
-//		tempfile.write(reinterpret_cast<char*>(&tempdata.value),tempdata.value_length*sizeof(char));
-		tempfile<<tempdata.key.c_str();
+		tempfile.write(reinterpret_cast<char*>(&tempkey_length),sizeof(uint32_t));
+		tempfile.write(reinterpret_cast<char*>(&tempvalue_length),sizeof(uint32_t));
+		const char *keykey = key.c_str();
+		tempfile<<keykey;
+		
 		return KVDB_OK;
 	}					
 	else
-	return KVDB_NOT_EXISTS_KEY;
+	return KVDB_INVALID_KEY;
 		
-}
 } 
