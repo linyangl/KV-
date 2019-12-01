@@ -1,6 +1,7 @@
-#include<iostream>
+#include <iostream>
+#include "kvdb.h"
+/* run this program using the console pauser or add your own getch, system("pause") or input loop */
 
-#include "kvbasedata.h"
 
 int main(int, char**) {
     std::string value;
