@@ -3,6 +3,8 @@
  * Simple File Based K-V Database
  */
 
+#ifndef KVDB_H
+#define KVDB_H
 #include <exception>
 #include <string>
 #include <vector>
@@ -176,3 +178,4 @@ namespace kvdb {
             const std::string& key);
 
 }   // namespace kvdb
+#endif // #define KVDB
