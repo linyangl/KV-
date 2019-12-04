@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string>
 #include <fstream> 
+#include <unordered_map>
 #include "kvdb.h" 
 using namespace std;
 using namespace kvdb;
@@ -172,3 +173,53 @@ int kvdb::del(KVDBHandler* handler, const std::string& key)
 	return KVDB_INVALID_KEY;
 		
 } 
+
+int kvdb::purge(KVDBHandler* handler)
+{
+	string newc_path = "new_dp_path";
+	fstream ncfile(newc_path.c_str(),ios::in|ios::out|ios::app|ios::binary);
+
+	fstream tempfile = handler->getfile();
+	
+	unordered_map<string,int> hashmaplike;
+	unordered_map<string,int>::iterator it;
+	it = hashmaplike.begin();
+	while(tempfile.peek()!=EOF)
+	{
+		int pos = tempfile.tellg();
+		int tempkey_length;
+		int tempvalue_length;
+		int tempkey;
+		int tempkey2;
+		tempfile.read(reinterpret_cast<char*>(&tempkey_length),sizeof(uint32_t));
+		tempfile.read(reinterpret_cast<char*>(&tempvalue_length),sizeof(uint32_t));
+		tempfile.read(reinterpret_cast<char*>(&tempkey),tempkey_length*sizeof(char));
+		tempkey[tempkey_length]='\0';
+	    tempkey2 = tempkey;
+		if(tempvalue_length != 0)
+		{
+			hashmaplike[tempkey2] = pos;
+		}
+		else
+		hashmaplike.erase(tempkey2);
+	}
+	
+	kvdb::KVDHandler *temphandler = new KVDHandler(newc_path);
+	while(it != hashmaplike.end())
+	{
+		string key = it->first;
+		string value;
+		if(get(handler,key,value) == KVDB_OK )
+		{
+			set(temphandler,key,value);
+		}
+		it++;
+	}
+	
+	handler->~KVDBHandler();
+	temphandler->~KVDBHandler();
+	string originalpath = handler->getpath_file(); 
+	rename(originalpath.c_str(),newc_path.c_str());
+	remove(originalpath.c_str());
+	
+}
