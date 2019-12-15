@@ -3,18 +3,28 @@
 #include <string>
 #include <unordered_map> 
 #include <fstream> 
+#include <time.h>
+#include <queue> 
 #include "kvdb2.h" 
 using namespace std;
 using namespace kvdb;
 
-struct KVData
+
+Expiration_time::Expiration_time()
 {
-	uint32_t  key_length;
-	uint32_t  value_length;
-	string key;
-	string value;
-};
-//fstream file;
+	key="";
+	expiration_time=0;
+}
+bool Expiration_time::operator <(const Expiration_time &a) const
+{
+	return expiration_time>a.expiration_time;
+}
+
+Expiration_Index::Expiration_Index()
+{
+	offset=0;
+	expiration_time=0;
+}
 	
 KVDBHandler::KVDBHandler(const std::string& db_file)
 {
@@ -62,6 +72,7 @@ int KVDBHandler::creatAOFindex()
 		int pos = tempfile.tellg();
 		int tempkey_length;
 		int tempvalue_length;
+		time_t new_time; 
 		char tempkey[1024];
 		string tempkey2;
 		tempfile.read(reinterpret_cast<char*>(&tempkey_length),sizeof(uint32_t));
@@ -69,47 +80,52 @@ int KVDBHandler::creatAOFindex()
 		tempfile.read(reinterpret_cast<char*>(&tempkey),tempkey_length*sizeof(char));
 		tempkey[tempkey_length]='\0';
 	    tempkey2 = tempkey;
-		if(tempvalue_length != 0)
+		if(tempvalue_length == 0)
 		{
-			this->AOF_Index[tempkey2] = pos;
+			this->AOF_Index.erase(tempkey2);
+		}
+		else if(tempvalue_length ==-1)
+		{
+			tempfile.read(reinterpret_cast<char*>(&new_time), sizeof(time_t));
+			setExpiration(tempkey2,new_time);
+			Expiration_time exp;
+			exp.key=tempkey2;
+			exp.expiration_time=new_time;
+			Time_queue.push(exp);
 		}
 		else
-			this->AOF_Index.erase(tempkey2);
+		{
+				setOffset(tempkey2,pos); 
+		}
 		
 		tempfile.seekg(tempvalue_length,ios::cur);
 	}
 	
-//	unordered_map<string,int>::iterator it;
-//	it = AOF_index.begin();
-//	for(;it!=AOF_index.end();it++)
-//	{
-//		cout<<it->first<<":"<<it->second<<endl; 
-//	}
 	return KVDB_OK;
 }
 
-unordered_map<std::string,int>* KVDBHandler::getAOFIndex()
+unordered_map<std::string,Expiration_Index>* KVDBHandler::getAOFIndex()
 {
 	return &this->AOF_Index;
 }
 
 int KVDBHandler::setOffset(const std::string &key,const int &pos)
 {
-	this->AOF_Index[key] = pos;
+	AOF_Index[key].offset= pos;
+	AOF_Index[key].expiration_time = 0;
 	return KVDB_OK;
 }
 
-int KVDBHandler::getOffset(const std::string &key)
+int KVDBHandler::getOffset(const std::string &key,int &pos)
 {
-	int pos;
-	unordered_map<string,int>::iterator it = this->AOF_Index.find(key);
+	//int pos;
+	unordered_map<string,Expiration_Index>::iterator it = this->AOF_Index.find(key);
 	if(it != this->AOF_Index.end())
 	{
-		pos=it->second;
-		//cout<<it->first<<"::::"<<it->second<<endl; 
-		return pos;
+		pos=it->second.offset;
+		return KVDB_OK;
 	}	
-	return KVDB_NOT_EXISTS_KEY;
+	return -1;
 }
 
 int KVDBHandler::deleteOffset(const std::string &key)
@@ -117,6 +133,60 @@ int KVDBHandler::deleteOffset(const std::string &key)
 	this->AOF_Index.erase(key);
 	return KVDB_OK;
 }
+
+
+std::priority_queue<Expiration_time>* KVDBHandler::getTimequeue()
+{
+	return &Time_queue;
+}
+
+int KVDBHandler::getExpiration(const std::string &key,time_t &new_time)
+{
+	unordered_map<string,Expiration_Index>::iterator it=this->AOF_Index.find(key);
+	if(it != this->AOF_Index.end())
+	{
+		new_time=it->second.expiration_time;
+		return KVDB_OK;
+	}
+	return -1;
+}
+
+int KVDBHandler::setExpiration(const std::string &key,const time_t &new_time)
+{
+	this->AOF_Index[key].expiration_time = new_time;
+	return KVDB_OK;
+}
+
+int KVDBHandler::updataKey()
+{
+	time_t t=time(NULL);
+	time_t now = t;
+	while(true)
+	{
+		if(Time_queue.empty())
+		{
+			break;
+		}
+		Expiration_time exp=Time_queue.top();
+		if(exp.expiration_time>t)
+		{
+			break;
+		}
+		time_t new_time;
+		getExpiration(exp.key,new_time);
+		if(new_time == exp.expiration_time)
+		{
+			del(this,exp.key);
+		}
+		else
+		{
+			Time_queue.pop();
+			continue;
+		}
+	 } 
+}
+
+
 
 
 int kvdb::set(KVDBHandler* handler, const std::string& key, const std::string& value)
@@ -140,6 +210,7 @@ int kvdb::set(KVDBHandler* handler, const std::string& key, const std::string& v
 
 int kvdb::get(KVDBHandler* handler, const std::string& key, std::string& value)
 {
+	handler->updataKey();
 	fstream& tempfile = handler->getfile();
 	
 	// tempdata of KVData;
@@ -147,8 +218,8 @@ int kvdb::get(KVDBHandler* handler, const std::string& key, std::string& value)
 	uint32_t  tempvalue_length;
 	int pos;
 
-	pos = handler->getOffset(key);
-	if(pos == KVDB_NOT_EXISTS_KEY) 
+	int flag = handler->getOffset(key,pos);
+	if(flag == -1) 
 		return KVDB_INVALID_KEY;
 	
 	tempfile.seekg(pos,ios::beg);
@@ -169,8 +240,8 @@ int kvdb::del(KVDBHandler* handler, const std::string& key)
 	uint32_t  tempvalue_length ;
 	int pos;
 	
-	pos = handler->getOffset(key);
-	if(pos == KVDB_NOT_EXISTS_KEY) return KVDB_INVALID_KEY;
+	int flag=handler->getOffset(key,pos);
+	if(flag == -1) return KVDB_INVALID_KEY;
 	
 	tempkey_length = key.length();
 	tempvalue_length = 0;
@@ -190,8 +261,8 @@ int kvdb::purge(KVDBHandler* handler)
 	fstream ncfile(newc_path.c_str(),ios::in|ios::out|ios::app|ios::binary);
 
 	fstream &tempfile = handler->getfile();
-	unordered_map<string,int> *index = handler->getAOFIndex();
-	unordered_map<string,int>::iterator it;
+	unordered_map<string,Expiration_Index> *index = handler->getAOFIndex();
+	unordered_map<string,Expiration_Index>::iterator it;
 	it = index->begin();
 	kvdb::KVDBHandler temphandler(newc_path);
 	
@@ -212,5 +283,26 @@ int kvdb::purge(KVDBHandler* handler)
 	string originalpath = handler->getpath_file(); 
 	rename(originalpath.c_str(),newc_path.c_str());
 	remove(originalpath.c_str());	
+}
+
+int kvdb::expires(KVDBHandler* handler, const std::string& key, int n)
+{
+	fstream &tempfile = handler->getfile();
+	tempfile.seekg(0,ios::end);
+	time_t t = time(NULL);
+	int new_time=t+n;
+	Expiration_time exp;
+	exp.key=key;
+	exp.expiration_time=new_time;
+	std::priority_queue<Expiration_time>* q=handler->getTimequeue();
+	q->push(exp);
+	handler->setExpiration(key,new_time);
+	int key_length=key.length(),value_length=-1;
+	tempfile.write(reinterpret_cast<char *>(&key_length), sizeof(int)); 
+	tempfile.write(reinterpret_cast<char *>(&value_length), sizeof(int)); 
+	const char *keykey=key.c_str();  
+	tempfile<<keykey;
+	tempfile.write(reinterpret_cast<char *>(&new_time), sizeof(int)); 
+	
 }
 

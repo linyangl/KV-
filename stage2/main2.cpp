@@ -188,6 +188,7 @@ int main(int, char**) {
     kvdb::del(&kv, "key_ut");
     kvdb::del(&kv, "key_j");
     kvdb::del(&kv, "key_eyu");
+    
     if (kvdb::KVDB_OK == kvdb::get(&kv, "key_gr", value)) {
         std::cout << value << std::endl;
     } else {
@@ -498,6 +499,7 @@ int main(int, char**) {
     } else {
         std::cout << "NOT EXISTS" << std::endl;
     }
+    //kvdb::purge(&kv); 
     kvdb::del(&kv, "key_l");
     if (kvdb::KVDB_OK == kvdb::get(&kv, "key_h", value)) {
         std::cout << value << std::endl;
@@ -1811,6 +1813,7 @@ int main(int, char**) {
     kvdb::set(&kv, "key_bj", "value_bij");
     kvdb::set(&kv, "key_gd", "value_z");
     kvdb::del(&kv, "key_q");
+    //kvdb::purge(&kv); 
     if (kvdb::KVDB_OK == kvdb::get(&kv, "key_wa", value)) {
         std::cout << value << std::endl;
     } else {

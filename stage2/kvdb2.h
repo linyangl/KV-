@@ -10,6 +10,8 @@
 #include <vector>
 #include <unordered_map>
 #include <fstream> 
+#include <time.h>
+#include <queue> 
 
 namespace kvdb {
     // Def of return code
@@ -22,15 +24,30 @@ namespace kvdb {
     // No space on devices for purging.
     const int KVDB_NO_SPACE_LEFT_ON_DEVICES = 3;
     // Not-exists KEY
-    const int KVDB_NOT_EXISTS_KEY = -1;
+    const int KVDB_NOT_EXISTS_KEY = 4;
     
+    class Expiration_time{
+    	public:
+			std::string key;
+			time_t expiration_time;
+			Expiration_time();
+			bool operator <(const Expiration_time &a) const;
+	};
+	
+	class Expiration_Index{
+		public:
+			int offset;
+			time_t expiration_time;		
+			Expiration_Index();	 
+	};
     // File Handler for KV-DB
     class KVDBHandler {
     
     private:
     	std::fstream file;
 		std::string assignpath_file;
-		std::unordered_map<std::string,int> AOF_Index;
+		std::unordered_map<std::string,Expiration_Index> AOF_Index;
+		std::priority_queue<Expiration_time> Time_queue;
 
     public:
         // Constructor, creates DB handler
@@ -45,13 +62,21 @@ namespace kvdb {
 		
 		int creatAOFindex();
 		
-		std::unordered_map<std::string,int>* getAOFIndex();
+		std::unordered_map<std::string ,Expiration_Index>* getAOFIndex();
 		
 		int setOffset(const std::string &key,const int &pos);
 		
-		int getOffset(const std::string &key);
+		int getOffset(const std::string &key,int &pos);
 		
 		int deleteOffset(const std::string &key);
+		
+		std::priority_queue<Expiration_time>* getTimequeue();
+		
+		int getExpiration(const std::string &key,time_t &gettime);
+		
+		int setExpiration(const std::string &key,const time_t &new_time);
+		
+		int updataKey();
 		
         // Closes DB handler
         ~KVDBHandler();
